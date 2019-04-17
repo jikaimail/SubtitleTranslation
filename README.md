@@ -18,7 +18,6 @@
 ### 4) TrSubtitle -jsfile json文件名
 ###    如果需要对字幕进一步调整，可在json文件内对字幕内容进行修正；
 ###    程序根据调整后的json文件，重新生成双语字幕文件。   
-### 注意事项：确保翻译内容与原内容的行位置和总行数要匹配。 
 
 ## 参数选项:
 ###  -h          : 帮助
@@ -33,7 +32,7 @@
 ### https://cn.bing.com/Translator
 ### https://fanyi.baidu.com/
 
-## 机翻中文字幕有用的工具链接： 
+## 其它机翻中文字幕工具链接： 
 ###  1) 对于无英文字幕的视频可采用【https://github.com/agermanidis/autosub Autosub】  生成英文字幕
 ###  2) 推荐一个字幕编辑器 【https://github.com/SubtitleEdit/subtitleedit  字幕编辑器】
 ##     也许大家注意到了，这两个软件均具有中文字幕翻译功能；但中文翻译的效果并不理想；
