@@ -26,7 +26,11 @@
 ###  -infile     : 输入要处理的字幕文件名. 
 ###               (需要无格式的srt字幕文件)
 ###  -trfile     : 输入已翻译文件名. 
-###  -jsfile     : 输入json文件名.    
+###  -jsfile     : 输入json文件名.   
+
+## 推荐的机翻网址：
+### https://translate.google.com/
+### https://cn.bing.com/Translator
 
 ## 机翻中文字幕有用的工具链接： 
 ###  1) 对于无英文字幕的视频可采用【https://github.com/agermanidis/autosub Autosub】  生成英文字幕
