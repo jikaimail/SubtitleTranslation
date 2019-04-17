@@ -6,7 +6,7 @@
 ### 本软件调用：
 #### 【https://github.com/huichen/sego  sego Go中文分词】进行中文字幕的分割
 #### 【https://github.com/gitote/chardet  chardet】判断输入的文件字符集
-
+###  本软件完全使用golang 1.11+ 开发
 ## 使用方法：
 ###     很多视频由于某种原因，无人工翻译的中文字幕；本软件通过对原文字幕进行处理，提高机翻中文字幕的准确性。 也可作为人工中文字幕翻译简单的辅助工具。
 ### 1) TrSubtitle -infile 字幕文件名  
