@@ -7,17 +7,18 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/gitote/chardet"
-	"github.com/huichen/sego"
-	"golang.org/x/text/encoding/simplifiedchinese"
-	"golang.org/x/text/encoding/traditionalchinese"
-	"golang.org/x/text/transform"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/gitote/chardet"
+	"github.com/huichen/sego"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/encoding/traditionalchinese"
+	"golang.org/x/text/transform"
 )
 
 type subpart struct {
@@ -110,7 +111,7 @@ latest version:
 提高机翻中文字幕的准确性。 也可作为中文字幕翻译的简单辅助工具。
  1) TrSubtitle -infile 字幕文件名  
     生成待翻译的英文文件；
- 2) 将生成的待翻译的英文文件，人工翻译并存储在一个文件内；
+ 2) 将生成的待翻译的英文文件，人工翻译(见机翻网址)并存储在一个文件内；
 确保翻译内容与原内容的行位置和总行数要匹配。 
  3) TrSubtitle -infile 字幕文件名  -trfile 已翻译的文件名  
     生成最终双语字幕文件。
@@ -226,7 +227,6 @@ func main() {
 		flag.Usage()
 		os.Exit(0)
 	}
-
 	//由json文件直接生成双语字幕
 	if len(josnfilepath) > 0 {
 		_, lerr := os.Stat(josnfilepath)
@@ -254,7 +254,7 @@ func main() {
 		if strings.HasSuffix(strings.ToLower(josnfilepath), ".json") {
 			tempath := josnfilepath[0 : len(josnfilepath)-5]
 			if strings.HasSuffix(strings.ToLower(tempath), ".srt") {
-				jschsfilename = infilepath[0:len(tempath)-4] + ".chs.srt"
+				jschsfilename = josnfilepath[0:len(tempath)-4] + ".chs.srt"
 			} else {
 				jschsfilename = josnfilepath + ".txt"
 			}
@@ -265,7 +265,6 @@ func main() {
 
 		del_file(jschsfilename)
 
-
 		modifyfile, mErr := os.OpenFile(jschsfilename, os.O_CREATE|os.O_WRONLY, os.ModeAppend)
 		checkError(mErr)
 		defer modifyfile.Close()
@@ -273,11 +272,19 @@ func main() {
 		jssubtext := ""
 
 		//根据json 文件直接生成双语字幕
+		//增加传播字幕行，让更多人受益。
+		jsfirstext := "1" + "\n" +
+			"00:00:00,000 --> 00:00:05,000" + "\n" +
+			"{\\pos(200,210)}由机翻中文字幕辅助软件直接生成，此字幕仅用于研究学习" + "\n" +
+			"url：github.com/jikaimail/SubtitleTranslation/" + "\n"
+		_, werr := modifyfile.WriteString(jsfirstext)
+		checkError(werr)
+
 		for jspos := range jSub.Subtitles {
 
 			for spos := range jSub.Subtitles[jspos].SplitInfo {
 
-				jssubtext = strconv.Itoa(jSub.Subtitles[jspos].SplitInfo[spos].SPos) + "\n" +
+				jssubtext = strconv.Itoa(jSub.Subtitles[jspos].SplitInfo[spos].SPos+1) + "\n" +
 					jSub.Subtitles[jspos].SplitInfo[spos].STime + "\n" +
 					jSub.Subtitles[jspos].SplitInfo[spos].SCSub + "\n" +
 					jSub.Subtitles[jspos].SplitInfo[spos].SSub + "\n"
@@ -309,7 +316,6 @@ func main() {
 		os.Exit(0)
 	}
 
-
 	file, err := os.Open(infilepath)
 	checkError(err)
 	defer file.Close()
@@ -329,8 +335,8 @@ func main() {
 	var CurSub subInfo
 	var curpart subpart
 	var allsub []subInfo
-    preTime := ""
-    BomLine := 1
+	preTime := ""
+	BomLine := 1
 	CurSub = subInfo{}
 
 	scanner := bufio.NewScanner(file)
@@ -348,15 +354,14 @@ func main() {
 		if BomLine == 1 {
 			subDigit := []rune(subText)
 			for idigit := range subDigit {
-				if   subDigit[idigit] == '\uFEFF' {
-					subText = strings.Replace(subText, "\uFEFF", "",1)
+				if subDigit[idigit] == '\uFEFF' {
+					subText = strings.Replace(subText, "\uFEFF", "", 1)
 				}
 			}
-			BomLine ++
+			BomLine++
 		}
 
-
-		if linereg.MatchString(subText)  {
+		if linereg.MatchString(subText) {
 			if strconv.Itoa(lineCn) == subText {
 				//fmt.Println(subText)
 				curpart = subpart{}
@@ -501,6 +506,14 @@ func main() {
 		}
 
 		//开始合并翻译文件
+		//增加传播字幕行，让更多人受益。
+		jsfirstxt := "1" + "\n" +
+			"00:00:00,000 --> 00:00:05,000" + "\n" +
+			"{\\pos(200,210)}由机翻中文字幕辅助软件直接生成，此字幕仅用于研究学习" + "\n" +
+			"url：github.com/jikaimail/SubtitleTranslation/" + "\n"
+		_, suberr := subfile.WriteString(jsfirstxt)
+		checkError(suberr)
+
 		chsScanner := bufio.NewScanner(chsfile)
 		lCount := 0
 
@@ -508,7 +521,7 @@ func main() {
 			//去掉utf8 BOM标志
 			bomtext := ""
 			if lCount == 0 {
-				bomtext = strings.Replace(chsScanner.Text(), "\uFEFF", "",1)
+				bomtext = strings.Replace(chsScanner.Text(), "\uFEFF", "", 1)
 
 			} else {
 				bomtext = chsScanner.Text()
@@ -540,11 +553,10 @@ func main() {
 
 				regdig := regexp.MustCompile(`[0-9]+[，][0-9]+`)
 				regdigf := func(s string) string {
-					 return strings.Replace(s,"，",",",-1)
+					return strings.Replace(s, "，", ",", -1)
 				}
-				digfstr :=  regdig.ReplaceAllStringFunc (lastSub, regdigf)
-				lastSub =  digfstr
-
+				digfstr := regdig.ReplaceAllStringFunc(lastSub, regdigf)
+				lastSub = digfstr
 
 				regSplit := regexp.MustCompile(`,$`)
 				preSplit := true
@@ -631,7 +643,7 @@ func main() {
 									var lpos float64
 									lpos = 0
 									for j := k; j < len(CText)-1; j++ {
-										if (lpos <= avgline) && (j < len(CText) - 2){
+										if (lpos <= avgline) && (j < len(CText)-2) {
 											if ContainSym(CText[j]) {
 												lsub += CText[j]
 												subchs += lsub
@@ -655,10 +667,10 @@ func main() {
 									break
 								}
 
-								brnum := (len(allsub[lCount].SplitInfo) - i -1 ) * 2
-								if k < ((len(CText) - brnum)) {
+								brnum := (len(allsub[lCount].SplitInfo) - i - 1) * 2
+								if k < (len(CText) - brnum) {
 									subchs += CText[k]
-								}  else  {
+								} else {
 									break
 								}
 
@@ -674,7 +686,7 @@ func main() {
 					allsub[lCount].SplitInfo[i].SCSub = subchs
 					lastEnSub = lastEnSub[len(allsub[lCount].SplitInfo[i].SSub):len(lastEnSub)]
 					lastSub = lastSub[len(subchs):len(lastSub)]
-					subtext = strconv.Itoa(allsub[lCount].SplitInfo[i].SPos) + "\n" +
+					subtext = strconv.Itoa(allsub[lCount].SplitInfo[i].SPos+1) + "\n" +
 						allsub[lCount].SplitInfo[i].STime + "\n" +
 						allsub[lCount].SplitInfo[i].SCSub + "\n" +
 						allsub[lCount].SplitInfo[i].SSub + "\n"
