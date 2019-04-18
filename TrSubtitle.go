@@ -70,7 +70,7 @@ func l_usage() {
 
 	if slang == "en" {
 		fmt.Fprintf(os.Stderr,
-			`Subtitle translation / version: TrSubtitle/0.1  
+			`Subtitle translation / version: TrSubtitle/0.2  
    by jikai Email:jikaimail@gmail.com
 Usage: 
   Many videos have no Chinese subtitles for some reason; 
@@ -103,7 +103,7 @@ latest version:
 
 	} else {
 		fmt.Fprintf(os.Stderr,
-			`机翻中文字幕辅助软件 / 版本: TrSubtitle/0.1
+			`机翻中文字幕辅助软件 / 版本: TrSubtitle/0.2
    by jikai  Email:jikaimail@gmail.com
 使用方法：
    很多视频由于某种原因，没有中文字幕；本软件通过对原文字幕进行处理，
@@ -220,12 +220,7 @@ func ContainSym(tsym string) bool {
 }
 
 func main() {
-
 	flag.Parse()
-
-	//infilepath = "BBC.The.Beginning.And.End.Of.The.Universe.Series.1.1of2.The.Beginning.720p.HDTV.x264.AAC.MVGroup.org.mp4.srt"
-//	trfilepath = "chs.txt"
-	//josnfilepath = "BBC.The.Beginning.And.End.Of.The.Universe.Series.1.1of2.The.Beginning.720p.HDTV.x264.AAC.MVGroup.org.mp4.srt.json"
 
 	if h || (infilepath == "" && josnfilepath == "") {
 		flag.Usage()
@@ -245,9 +240,12 @@ func main() {
 			}
 			os.Exit(0)
 		}
+
 		var jSub Subtitles
 
 		jsfile, _ := ioutil.ReadFile(josnfilepath)
+		//去掉utf8 BOM标志
+		jsfile = bytes.Replace(jsfile, []byte("\uFEFF"), []byte(""), 1)
 
 		_ = json.Unmarshal([]byte(jsfile), &jSub.Subtitles)
 
@@ -266,6 +264,7 @@ func main() {
 		}
 
 		del_file(jschsfilename)
+
 
 		modifyfile, mErr := os.OpenFile(jschsfilename, os.O_CREATE|os.O_WRONLY, os.ModeAppend)
 		checkError(mErr)
@@ -310,6 +309,7 @@ func main() {
 		os.Exit(0)
 	}
 
+
 	file, err := os.Open(infilepath)
 	checkError(err)
 	defer file.Close()
@@ -329,20 +329,34 @@ func main() {
 	var CurSub subInfo
 	var curpart subpart
 	var allsub []subInfo
-
+    preTime := ""
+    BomLine := 1
 	CurSub = subInfo{}
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		//匹配空行
 		subText := scanner.Text()
+
+		//匹配空行
 		nilreg := regexp.MustCompile(`^$`)
 		if nilreg.MatchString(subText) {
 			continue
 		}
 		//判断行号
 		linereg := regexp.MustCompile(`^[0-9]+$`)
-		if linereg.MatchString(subText) {
+		//去掉utf8 BOM标志
+		if BomLine == 1 {
+			subDigit := []rune(subText)
+			for idigit := range subDigit {
+				if   subDigit[idigit] == '\uFEFF' {
+					subText = strings.Replace(subText, "\uFEFF", "",1)
+				}
+			}
+			BomLine ++
+		}
+
+
+		if linereg.MatchString(subText)  {
 			if strconv.Itoa(lineCn) == subText {
 				//fmt.Println(subText)
 				curpart = subpart{}
@@ -362,14 +376,21 @@ func main() {
 		reg := regexp.MustCompile(`([;\.\?!])\"*$`)
 		if reg.MatchString(subText) {
 			//fmt.Println("--" + subText)
-			mNum++
+
 			if lEnd == 1 {
 				NewSub += subText
 			} else {
 				NewSub += subText
 			}
-			curpart.SSub = subText
-			CurSub.SplitInfo = append(CurSub.SplitInfo, curpart)
+
+			if (preTime == curpart.STime) && (BomLine >= 2) {
+				CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub += subText
+			} else {
+				curpart.SSub = subText
+				CurSub.SplitInfo = append(CurSub.SplitInfo, curpart)
+				mNum++
+			}
+
 			NewSub += "\n"
 			//替换影响机器翻译质量的 - 符号
 			NewSub = strings.Replace(NewSub, "-", " ", -1)
@@ -386,10 +407,18 @@ func main() {
 			NewCn++
 		} else {
 			NewSub += subText + " "
-			curpart.SSub = subText
-			CurSub.SplitInfo = append(CurSub.SplitInfo, curpart)
+
+			if (preTime == curpart.STime) && (BomLine >= 2) {
+				CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub += subText
+			} else {
+				curpart.SSub = subText
+				CurSub.SplitInfo = append(CurSub.SplitInfo, curpart)
+				mNum++
+			}
+
+			preTime = curpart.STime
 			lEnd = 0
-			mNum++
+
 		}
 
 	}
@@ -400,6 +429,7 @@ func main() {
 			fmt.Println("Please translate the file [" + infilepath + ".en.txt]  " + "\n")
 			fmt.Println("Translate URLs: https://translate.google.com/" + "\n")
 			fmt.Println("             or https://cn.bing.com/Translator" + "\n")
+			fmt.Println("             or https://fanyi.baidu.com" + "\n")
 			fmt.Println("Chrome can drag and drop files directly onto the above website pages,  " + "\n")
 			fmt.Println("  and Google Translate can generate translations directly." + "\n")
 			fmt.Println("Note: Make sure the translated content matches the line location " + "\n")
@@ -407,8 +437,9 @@ func main() {
 		} else {
 			fmt.Println("请翻译此文件 [" + infilepath + ".en.txt]  " + "\n")
 			fmt.Println("可选用以下网址进行翻译： " + "\n")
-			fmt.Println(" URLs: https://translate.google.com/" + "\n")
+			fmt.Println(" URLs: https://translate.google.com" + "\n")
 			fmt.Println("    or https://cn.bing.com/Translator" + "\n")
+			fmt.Println("    or https://fanyi.baidu.com" + "\n")
 			fmt.Println("Chrome可将文件直接拖拽到以上网站页面，谷歌翻译即可生成翻译内容。" + "\n")
 			fmt.Println("注意事项：确保翻译内容与原内容的行位置和总行数要匹配。" + "\n")
 		}
@@ -474,7 +505,15 @@ func main() {
 		lCount := 0
 
 		for chsScanner.Scan() {
-			temptext := []byte(chsScanner.Text())
+			//去掉utf8 BOM标志
+			bomtext := ""
+			if lCount == 0 {
+				bomtext = strings.Replace(chsScanner.Text(), "\uFEFF", "",1)
+
+			} else {
+				bomtext = chsScanner.Text()
+			}
+			temptext := []byte(bomtext)
 			switch tCA[0].Name {
 			case "GB18030":
 				stem, _ := DecodeGBK(temptext)
