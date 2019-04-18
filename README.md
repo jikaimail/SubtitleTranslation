@@ -1,7 +1,7 @@
 # SubtitleTranslation
 提高机翻中文字幕准确性
 
-# 机翻中文字幕辅助软件 / 版本 : TrSubtitle / 0.1 
+# 机翻中文字幕辅助软件 / 版本 : TrSubtitle / 0.2 
 ####  by jikai   Email:jikaimail@gmail.com
 ### 本软件调用：
 #### 【https://github.com/huichen/sego  sego Go中文分词】进行中文字幕的分割
