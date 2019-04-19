@@ -50,17 +50,20 @@ type charCodes []charCode
 var (
 	h            bool
 	slang        string
+	sstype       string
 	infilepath   string
 	trfilepath   string
 	josnfilepath string
+
 )
 
 func init() {
 	flag.BoolVar(&h, "h", false, "this help")
-	flag.StringVar(&slang, "lang", "chs", "this help")
+	flag.StringVar(&slang, "lang", "chs", "this Language option")
 	flag.StringVar(&infilepath, "infile", "", "enter the file name here. \n (Requires plain srt subtitle file)")
 	flag.StringVar(&trfilepath, "trfile", "", "enter the translate file name here.")
 	flag.StringVar(&josnfilepath, "jsfile", "", "enter the json file name here.")
+	flag.StringVar(&sstype, "stype", "b", "this Subtitle option")
 
 	// 改变默认的 Usage，flag包中的Usage 其实是一个函数类型。这里是覆盖默认函数实现，具体见后面Usage部分的分析
 	flag.Usage = l_usage
@@ -71,63 +74,61 @@ func l_usage() {
 
 	if slang == "en" {
 		fmt.Fprintf(os.Stderr,
-			`Subtitle translation / version: TrSubtitle/0.2  
+			`Subtitle translation / version: TrSubtitle/0.3  
    by jikai Email:jikaimail@gmail.com
 Usage: 
-  Many videos have no Chinese subtitles for some reason; 
-the software processes the original subtitles.
-Improve the accuracy of the Chinese subtitles. 
-It can also be used as a simple auxiliary tool for Chinese subtitle translation.
- 1) TrSubtitle -infile subtitle file name
-     Generate English documents to be translated; 
- 2) The generated English file to be translated is manually translated 
-and stored in a file; Make sure the translated content matches the line location 
-and total number of rows of the original content.
- 3) TrSubtitle -infile subtitle file name -trfile translated file name
-     Generate the final bilingual subtitle file.
- 4) TrSubtitle -jsfile json filename
-     If you need to further adjust the subtitles, 
-     you can correct the subtitle content in the json file;
-     The program regenerates the bilingual subtitle file 
-     according to the adjusted json file.     
+  This software is used to extract the original text content in the untitled SRT
+original subtitles as the original text to be translated; The user translates 
+the original to be translated into a translation by using a website or a human 
+translation;The software then analyzes the translation and the original 
+subtitles to generate final subtitles.
+1)TrSubtitle -infile Original subtitle file name
+  Generate the original text of the subtitle to be translated;
+2)The generated original text to be translated is stored in a file after being 
+turned over by the website or manually translated;Make sure the translation 
+matches the line position and total number of lines in the original content.
+3)TrSubtitle -infile Original subtitle file name -trfile translation file name
+  Generate the required subtitle file.
+4)TrSubtitle -jsfile json filename
+  If you need to further adjust the subtitles, you can correct the subtitle 
+content in the json file;The program regenerates the required subtitle file 
+according to the adjusted json file.(only support this software json format)
 Options:
-  -h          : this help
-  -lang       : chs display Chinese help, 
-                en display English help default chs.
-  -infile     : enter the file name here. 
-               (Requires plain srt subtitle file)
-  -trfile     : enter the translate file name here. 
-  -jsfile     : enter the json file name here. 
-latest version:
- 【https://github.com/jikaimail/SubtitleTranslation/releases】
+-h : help
+-lang : chs display Chinese help en display English help. Default chs.
+-infile : Enter the name of the original subtitle file to be processed 
+  (requires unformatted SRT subtitle file)
+-trfile : Enter the name of the translation file.
+-jsfile : Enter the json file name.
+-stype : o Generate translated subtitle file 
+         b Generate bilingual subtitle files  Default b.
+latest version:【https://github.com/jikaimail/SubtitleTranslation/releases】
 `)
 
 	} else {
 		fmt.Fprintf(os.Stderr,
-			`机翻中文字幕辅助软件 / 版本: TrSubtitle/0.2
-   by jikai  Email:jikaimail@gmail.com
-使用方法：
-   很多视频由于某种原因，没有中文字幕；本软件通过对原文字幕进行处理，
-提高机翻中文字幕的准确性。 也可作为中文字幕翻译的简单辅助工具。
- 1) TrSubtitle -infile 字幕文件名  
-    生成待翻译的英文文件；
- 2) 将生成的待翻译的英文文件，人工翻译(见机翻网址)并存储在一个文件内；
-确保翻译内容与原内容的行位置和总行数要匹配。 
- 3) TrSubtitle -infile 字幕文件名  -trfile 已翻译的文件名  
-    生成最终双语字幕文件。
- 4) TrSubtitle -jsfile json文件名
-    如果需要对字幕进一步调整，可在json文件内对字幕内容进行修正；
-    程序根据调整后的json文件，重新生成双语字幕文件。
-    (仅支持本软件json格式)   
+			`机翻双语字幕辅助软件/版本 : TrSubtitle/0.3
+                  by jikai  Email:jikaimail@gmail.com
+   此软件用于将无格式的SRT原文字幕中的原文内容提取为待译原文；
+使用者通过机翻网站或者人工翻译将待译原文翻译成为译文；
+软件再将译文与原文字幕进行分析处理并生成最终字幕。
+1) TrSubtitle -infile 原文字幕文件名
+生成字幕原文待译文件；
+2) 将生成的待译原文文件通过机翻网站或者人工翻译后存储在一个文件内；
+确保译文与原文内容的行位置和总行数要匹配。
+3) TrSubtitle -infile 原文字幕文件名 -trfile 译文文件名
+生成所需的字幕文件。
+4) TrSubtitle -jsfile json文件名
+如果需要对字幕进一步调整，可在json文件内对字幕内容进行修正；
+程序根据调整后的json文件，重新生成所需的字幕文件。(仅支持本软件json格式)   
 参数选项:
-  -h          : 帮助
-  -lang       : chs显示中文帮助 en显示英文帮助. 默认chs.
-  -infile     : 输入要处理的字幕文件名. 
-               (需要无格式的srt字幕文件)
-  -trfile     : 输入已翻译文件名. 
-  -jsfile     : 输入json文件名.    
-最新版本：
-  【https://github.com/jikaimail/SubtitleTranslation/releases】
+-h : 帮助
+-lang   : chs显示中文帮助 en显示英文帮助. 默认chs.
+-infile : 输入要处理的原文字幕文件名(需要无格式的SRT字幕文件)
+-trfile : 输入译文文件名.
+-jsfile : 输入json文件名.
+-stype  : o 仅生成译文字幕 b 生成双语字幕文件 默认b.  
+最新版本：【https://github.com/jikaimail/SubtitleTranslation/releases】
 `)
 
 	}
@@ -283,21 +284,27 @@ func main() {
 		for jspos := range jSub.Subtitles {
 
 			for spos := range jSub.Subtitles[jspos].SplitInfo {
-
-				jssubtext = strconv.Itoa(jSub.Subtitles[jspos].SplitInfo[spos].SPos+1) + "\n" +
-					jSub.Subtitles[jspos].SplitInfo[spos].STime + "\n" +
-					jSub.Subtitles[jspos].SplitInfo[spos].SCSub + "\n" +
-					jSub.Subtitles[jspos].SplitInfo[spos].SSub + "\n"
+               if  sstype == "b" {
+				   jssubtext = strconv.Itoa(jSub.Subtitles[jspos].SplitInfo[spos].SPos+1) + "\n" +
+					   jSub.Subtitles[jspos].SplitInfo[spos].STime + "\n" +
+					   jSub.Subtitles[jspos].SplitInfo[spos].SCSub + "\n" +
+					   jSub.Subtitles[jspos].SplitInfo[spos].SSub + "\n"
+			   } else
+               {
+				   jssubtext = strconv.Itoa(jSub.Subtitles[jspos].SplitInfo[spos].SPos+1) + "\n" +
+					   jSub.Subtitles[jspos].SplitInfo[spos].STime + "\n" +
+					   jSub.Subtitles[jspos].SplitInfo[spos].SCSub  + "\n"
+			   }
 				_, werr := modifyfile.WriteString(jssubtext)
 				checkError(werr)
 			}
 		}
 
 		if slang == "en" {
-			fmt.Println("Generate bilingual subtitle files from json files. " + "\n")
+			fmt.Println("Generate subtitle file from json file. " + "\n")
 			fmt.Println("Please check the file: " + jschsfilename + " ." + "\n")
 		} else {
-			fmt.Println("由json文件生成双语字幕文件." + "\n")
+			fmt.Println("由json文件生成字幕文件." + "\n")
 			fmt.Println("请查看文件: " + jschsfilename + " ." + "\n")
 		}
 		os.Chmod(jschsfilename, 0644)
@@ -328,7 +335,7 @@ func main() {
 
 	lineCn := 1
 	NewCn := 1
-	lEnd := 1
+
 	mNum := 0
 
 	var NewSub string
@@ -337,6 +344,7 @@ func main() {
 	var allsub []subInfo
 	preTime := ""
 	BomLine := 1
+	lend := false
 	CurSub = subInfo{}
 
 	scanner := bufio.NewScanner(file)
@@ -360,9 +368,28 @@ func main() {
 			}
 			BomLine++
 		}
-
 		if linereg.MatchString(subText) {
 			if strconv.Itoa(lineCn) == subText {
+				if lineCn > 1 && lend {
+					NewSub += "\n"
+					//替换影响机器翻译质量的 - 空格 符号
+					NewSub = strings.Replace(NewSub, "-", " ", -1)
+					NewSub = strings.Replace(NewSub, "  ", " ", -1)
+					NewSub = strings.Replace(NewSub, "  ", " ", -1)
+
+					_, werr := enfile.WriteString(NewSub)
+					checkError(werr)
+
+					CurSub.DPos = NewCn
+					CurSub.MNum = mNum
+					CurSub.DESub = NewSub
+					allsub = append(allsub, CurSub)
+					NewCn++
+					CurSub = subInfo{}
+					NewSub = ""
+					mNum = 0
+				}
+
 				//fmt.Println(subText)
 				curpart = subpart{}
 				curpart.SPos = lineCn
@@ -370,6 +397,7 @@ func main() {
 				continue
 			}
 		}
+
 		//判断时间轴
 		timereg := regexp.MustCompile(`^\d*:\d*:\d*\d*:*,\d* --> \d*:\d*:\d*\d*:*,\d*$`)
 		if timereg.MatchString(subText) {
@@ -381,52 +409,56 @@ func main() {
 		reg := regexp.MustCompile(`([;\.\?!])\"*$`)
 		if reg.MatchString(subText) {
 			//fmt.Println("--" + subText)
-
-			if lEnd == 1 {
-				NewSub += subText
-			} else {
-				NewSub += subText
-			}
-
+			NewSub +=  subText + " "
 			if (preTime == curpart.STime) && (BomLine >= 2) {
-				CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub += subText
+				CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub += " " + subText
+				CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub = strings.Replace(CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub, "-", "", -1)
+				CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub = strings.Replace(CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub, "  ", " ", -1)
+				CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub = strings.Replace(CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub, "  ", " ", -1)
+
 			} else {
 				curpart.SSub = subText
 				CurSub.SplitInfo = append(CurSub.SplitInfo, curpart)
 				mNum++
+				preTime = curpart.STime
 			}
-
-			NewSub += "\n"
-			//替换影响机器翻译质量的 - 符号
-			NewSub = strings.Replace(NewSub, "-", " ", -1)
-			_, werr := enfile.WriteString(NewSub)
-			checkError(werr)
-
-			CurSub.DPos = NewCn
-			CurSub.MNum = mNum
-			CurSub.DESub = NewSub
-			allsub = append(allsub, CurSub)
-			CurSub = subInfo{}
-			NewSub = ""
-			mNum = 0
-			NewCn++
+			lend = true
 		} else {
 			NewSub += subText + " "
 
 			if (preTime == curpart.STime) && (BomLine >= 2) {
-				CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub += subText
+				CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub += " " + subText
+				CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub = strings.Replace(CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub, "-", "", -1)
+				CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub = strings.Replace(CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub, "  ", " ", -1)
+				CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub = strings.Replace(CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub, "  ", " ", -1)
 			} else {
 				curpart.SSub = subText
 				CurSub.SplitInfo = append(CurSub.SplitInfo, curpart)
 				mNum++
 			}
-
 			preTime = curpart.STime
-			lEnd = 0
-
+			lend = false
 		}
 
 	}
+
+	NewSub += "\n"
+	//替换影响机器翻译质量的 - 符号
+	NewSub = strings.Replace(NewSub, "-", " ", -1)
+	NewSub = strings.Replace(NewSub, "  ", " ", -1)
+	NewSub = strings.Replace(NewSub, "  ", " ", -1)
+
+	_, werr := enfile.WriteString(NewSub)
+	checkError(werr)
+
+	CurSub.DPos = NewCn
+	CurSub.MNum = mNum
+	CurSub.DESub = NewSub
+	allsub = append(allsub, CurSub)
+	CurSub = subInfo{}
+	NewSub = ""
+	mNum = 0
+
 	os.Chmod(infilepath+".en.txt", 0644)
 
 	if len(trfilepath) == 0 {
@@ -551,6 +583,11 @@ func main() {
 				lastSub = strings.Replace(lastSub, "  ", " ", -1)
 				lastSub = strings.Replace(lastSub, "  ", " ", -1)
 
+				lastEnSub = strings.Replace(lastEnSub, "  ", " ", -1)
+				lastEnSub = strings.Replace(lastEnSub, "  ", " ", -1)
+				lastEnSub = strings.Replace(lastEnSub, "  ", " ", -1)
+				lastEnSub = strings.Replace(lastEnSub, "  ", " ", -1)
+
 				regdig := regexp.MustCompile(`[0-9]+[，][0-9]+`)
 				regdigf := func(s string) string {
 					return strings.Replace(s, "，", ",", -1)
@@ -579,9 +616,30 @@ func main() {
 						//有逗号结尾分隔符切分
 						if (len(sChs) >= len(sEn)) && bsplit && preSplit {
 							for j := range sEn {
+								juNum :=  len(lastSub) / allsub[lCount].MNum
 								if j == len(sEn)-1 {
+									//处理译文多出一个逗号的特殊情况
+
+
+									if (len(sChs) > len(sEn)) &&
+										(!(len(sChs) == allsub[lCount].MNum - 1)) &&
+										(len(subchs) < (juNum - juNum/3) )  {
+										nextNum := len(subchs + sChs[j])
+										if nextNum < (juNum+ juNum/3) &&
+											( j < len(sChs) - 1) {
+											subchs += sChs[j]
+											subchs += "，"
+										}
+									}
 									break
+								} else {
+									if len(subchs + sChs[j]) > (juNum+ juNum/3) &&
+										len(subchs) > 0 {
+										break
+									}
+
 								}
+
 								subchs += sChs[j]
 								subchs += "，"
 							}
@@ -686,10 +744,16 @@ func main() {
 					allsub[lCount].SplitInfo[i].SCSub = subchs
 					lastEnSub = lastEnSub[len(allsub[lCount].SplitInfo[i].SSub):len(lastEnSub)]
 					lastSub = lastSub[len(subchs):len(lastSub)]
+					if  sstype == "b" {
 					subtext = strconv.Itoa(allsub[lCount].SplitInfo[i].SPos+1) + "\n" +
 						allsub[lCount].SplitInfo[i].STime + "\n" +
 						allsub[lCount].SplitInfo[i].SCSub + "\n" +
 						allsub[lCount].SplitInfo[i].SSub + "\n"
+					} else {
+						subtext = strconv.Itoa(allsub[lCount].SplitInfo[i].SPos+1) + "\n" +
+							allsub[lCount].SplitInfo[i].STime + "\n" +
+							allsub[lCount].SplitInfo[i].SCSub + "\n"
+					}
 					//fmt.Println(subtext)
 					//fmt.Println("POS:" + strconv.Itoa(allsub[lCount].DPos))
 					_, werr := subfile.WriteString(subtext)
@@ -699,10 +763,16 @@ func main() {
 			} else {
 				if allsub[lCount].MNum == 1 {
 					allsub[lCount].SplitInfo[0].SCSub = allsub[lCount].DCSub
-					subtext = strconv.Itoa(allsub[lCount].SplitInfo[0].SPos) + "\n" +
-						allsub[lCount].SplitInfo[0].STime + "\n" +
-						allsub[lCount].DCSub + "\n" +
-						allsub[lCount].SplitInfo[0].SSub + "\n"
+					if  sstype == "b" {
+						subtext = strconv.Itoa(allsub[lCount].SplitInfo[0].SPos + 1) + "\n" +
+							allsub[lCount].SplitInfo[0].STime + "\n" +
+							allsub[lCount].DCSub + "\n" +
+							allsub[lCount].SplitInfo[0].SSub + "\n"
+					} else {
+						subtext = strconv.Itoa(allsub[lCount].SplitInfo[0].SPos + 1) + "\n" +
+							allsub[lCount].SplitInfo[0].STime + "\n" +
+							allsub[lCount].DCSub + "\n"
+					}
 					//fmt.Println(subtext)
 					//fmt.Println("POS:" + strconv.Itoa(allsub[lCount].DPos))
 					_, werr := subfile.WriteString(subtext)
@@ -713,10 +783,10 @@ func main() {
 			lCount++
 		}
 		if slang == "en" {
-			fmt.Println("A bilingual subtitle file has been generated ." + "\n")
+			fmt.Println("A subtitle file has been generated ." + "\n")
 			fmt.Println("Please check the file: " + trchsfilename + " ." + "\n")
 		} else {
-			fmt.Println("生成双语字幕文件." + "\n")
+			fmt.Println("生成所需的字幕文件." + "\n")
 			fmt.Println("请查看文件: " + trchsfilename + " ." + "\n")
 		}
 		os.Chmod(trchsfilename, 0644)
