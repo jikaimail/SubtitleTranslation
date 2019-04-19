@@ -36,7 +36,7 @@
 ###  本软件完全使用golang 1.11+ 开发
 
 ## 其它机翻中文字幕工具链接： 
-###  1) 对于无英文字幕的视频可采用【https://github.com/agermanidis/autosub Autosub】  生成英文字幕
+###  1) 对于无英文字幕的视频可采用【https://github.com/agermanidis/autosub Autosub】  由谷歌的语音识别引擎可生成英文srt字幕文件
 ###  2) 推荐一个字幕编辑器 【https://github.com/SubtitleEdit/subtitleedit  字幕编辑器】
 ##     也许大家注意到了，这两个软件均具有中文字幕翻译功能；但中文翻译的效果并不理想；
 ##  这就是TrSubtitle软件编写的目的和想改进的内容，具体的改进的效果则限于个人水平啦！
