@@ -301,7 +301,7 @@ func JsonGenSub () {
 	os.Chmod(jschsfilename, 0644)
 }
 
-func inTotrText () []subInfo {
+func oSubGentrText (inpath string) []subInfo {
 	var insub []subInfo
 	var CurSub subInfo
 	var curpart subpart
@@ -316,13 +316,13 @@ func inTotrText () []subInfo {
 	lend := false
 
 
-	file, err := os.Open(infilepath)
+	file, err := os.Open(inpath)
 	checkError(err)
 	defer file.Close()
 
-	del_file(infilepath + ".en.txt")
+	del_file(inpath + ".en.txt")
 
-	enfile, enErr := os.OpenFile(infilepath+".en.txt", os.O_CREATE|os.O_WRONLY, os.ModeAppend)
+	enfile, enErr := os.OpenFile(inpath+".en.txt", os.O_CREATE|os.O_WRONLY, os.ModeAppend)
 	checkError(enErr)
 	defer enfile.Close()
 
@@ -444,7 +444,7 @@ func inTotrText () []subInfo {
 	NewSub = ""
 	mNum = 0
 
-	os.Chmod(infilepath+".en.txt", 0644)
+	os.Chmod(inpath+".en.txt", 0644)
 	return  insub
 }
 
@@ -788,7 +788,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	allsub = inTotrText()
+	allsub = oSubGentrText(infilepath)
 
 	if len(trfilepath) == 0 {
 		if slang == "en" {
