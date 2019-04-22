@@ -31,7 +31,7 @@
 ### 本软件调用：
 #### 【https://github.com/huichen/sego  sego Go中文分词】进行中文字幕的分割
 #### 【https://github.com/gitote/chardet  chardet】判断输入的文件字符集
-###  本软件完全使用golang 1.11+ 开发
+###  本软件完全使用golang 1.12.4 开发
 
 ## 其它机翻中文字幕工具链接： 
 ###  1) 对于无英文字幕的视频可采用【https://github.com/agermanidis/autosub Autosub】  此软件通过谷歌的语音识别引擎可生成英文srt字幕文件
