@@ -1,4 +1,4 @@
-# 机翻双语字幕辅助软件/版本：TrSubtitle / 0.4 
+# 机翻双语字幕辅助软件/版本：TrSubtitle / 0.5 
 ####  by jikai   Email:jikaimail@gmail.com
 # 软件目的：
 ## 通过分句将原文字幕全部提取为待译文件，完整的待译文件可提高机翻的准确性；采用分词、分句相结合的方式对译文按原时间轴进行分割，提高译文字幕的观看舒适度。
@@ -22,7 +22,7 @@
 ###  -trfile     : 输入译文文件名. 
 ###  -jsfile     : 输入json文件名.
 ###  -stype      : o 仅生成译文字幕 b 生成双语字幕文件 默认b.  
-
+###  -pfile      : 为原文字幕添加标点符号.(仅Europarl Corpus 效果不太理想)
 ## 推荐的机翻网址：
 ### https://translate.google.com/
 ### https://cn.bing.com/Translator
@@ -31,10 +31,11 @@
 ### 本软件调用：
 #### 【https://github.com/huichen/sego  sego Go中文分词】进行中文字幕的分割
 #### 【https://github.com/gitote/chardet  chardet】判断输入的文件字符集
+#### 【http://bark.phon.ioc.ee/punctuator 】为原文字幕添加标点符号，测试发现由于多种原因效果不太理想；还有部分需人工添加标点符号。
 ###  本软件完全使用golang 1.12.4 开发
 
 ## 其它机翻中文字幕工具链接： 
-###  1) 对于无英文字幕的视频可采用【https://github.com/agermanidis/autosub Autosub】  此软件通过谷歌的语音识别引擎可生成英文srt字幕文件
+###  1) 对于无英文字幕的视频可采用【https://github.com/agermanidis/autosub Autosub】  此软件通过谷歌的老版本语音识别引擎生成英文srt字幕文件,可惜标点符号不完整还需人工调整；
 ###  2) 推荐一个字幕编辑器 【https://github.com/SubtitleEdit/subtitleedit  字幕编辑器】
 ##     也许大家注意到了，这两个软件均具有中文字幕翻译功能；但中文翻译的效果并不理想；
 ##  这就是TrSubtitle软件编写的目的和想改进的内容，具体的改进的效果则限于个人水平啦！
