@@ -22,7 +22,7 @@
 ###  -trfile     : 输入译文文件名. 
 ###  -jsfile     : 输入json文件名.
 ###  -stype      : o 仅生成译文字幕 b 生成双语字幕文件 默认b.  
-###  -pfile      : 为原文字幕添加标点符号.(仅Europarl Corpus 效果不太理想)
+###  -pfile      ：为原文字幕添加标点符号。（仅限Europarl Corpus，部分字幕还需人工调整）
 ###  -npline     : 多少行原文字幕无标点符号时提示？默认 6
 ## 推荐的机翻网址：
 ### https://translate.google.com/
