@@ -10,6 +10,8 @@ import (
 	"github.com/gitote/chardet"
 	"github.com/huichen/sego"
 	"io/ioutil"
+	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"sort"
@@ -54,6 +56,8 @@ var (
 	infilepath   string
 	trfilepath   string
 	josnfilepath string
+	pgfilepath   string
+	nplinenum    int
 )
 
 func init() {
@@ -62,6 +66,8 @@ func init() {
 	flag.StringVar(&infilepath, "infile", "", "enter the file name here. \n (Requires plain srt subtitle file)")
 	flag.StringVar(&trfilepath, "trfile", "", "enter the translate file name here.")
 	flag.StringVar(&josnfilepath, "jsfile", "", "enter the json file name here.")
+	flag.StringVar(&pgfilepath, "pfile", "", "Add punctuation to the original subtitles.")
+	flag.IntVar(&nplinenum, "npline", 6, "How many lines of subtitles are there without punctuation? ")
 	flag.StringVar(&sstype, "stype", "b", "this Subtitle option")
 
 	// 改变默认的 Usage，flag包中的Usage 其实是一个函数类型。这里是覆盖默认函数实现，具体见后面Usage部分的分析
@@ -73,7 +79,7 @@ func l_usage() {
 
 	if slang == "en" {
 		fmt.Fprintf(os.Stderr,
-			`Subtitle translation / version: TrSubtitle/0.4  
+			`Subtitle translation / version: TrSubtitle/0.5  
    by jikai Email:jikaimail@gmail.com
 Usage: 
   This software is used to extract the original text content in the untitled SRT
@@ -101,12 +107,14 @@ Options:
 -jsfile : Enter the json file name.
 -stype : o Generate translated subtitle file 
          b Generate bilingual subtitle files  Default b.
+-pfile : Add punctuation to the original subtitles(Europarl Corpus)
+-npline : How many lines of subtitles are there without punctuation? default 6
 latest version:【https://github.com/jikaimail/SubtitleTranslation/releases】
 `)
 
 	} else {
 		fmt.Fprintf(os.Stderr,
-			`机翻双语字幕辅助软件/版本 : TrSubtitle/0.4
+			`机翻双语字幕辅助软件/版本 : TrSubtitle/0.5
                   by jikai  Email:jikaimail@gmail.com
    此软件用于将无格式的SRT原文字幕中的原文内容提取为待译原文；
 使用者通过机翻网站或者人工翻译将待译原文翻译成为译文；
@@ -127,6 +135,8 @@ latest version:【https://github.com/jikaimail/SubtitleTranslation/releases】
 -trfile : 输入译文文件名.
 -jsfile : 输入json文件名.
 -stype  : o 仅生成译文字幕 b 生成双语字幕文件 默认b.  
+-pfile  : 为原文字幕添加标点符号.(仅Europarl Corpus)
+-npline : 多少行原文字幕无标点符号时提示？默认 6
 最新版本：【https://github.com/jikaimail/SubtitleTranslation/releases】
 `)
 
@@ -204,8 +214,23 @@ func del_file(filename string) bool {
 		return false
 	}
 }
+func containEndSym(endSym string) bool {
+	//英文符号 逗号，句号，问号，感叹号，冒号，分号和破折号
+	str := [...]string{",", ".", "?", "!", ":", ";", "-"}
+	bresult := false
+
+	for i := range str {
+		if strings.Compare(endSym, str[i]) == 0 {
+			bresult = true
+			break
+		}
+
+	}
+	return bresult
+}
 
 func ContainSym(tsym string) bool {
+	//中文符号 逗号，句号，引号，问号，感叹号，分号，括号
 	str := [...]string{"，", "。", "”", "？", "！", "；", "）", ")"}
 
 	bresult := false
@@ -220,15 +245,15 @@ func ContainSym(tsym string) bool {
 	return bresult
 }
 
-func JsonGenSub () {
+func JsonGenSub() {
 
 	_, lerr := os.Stat(josnfilepath)
 	if os.IsNotExist(lerr) {
 		if slang == "en" {
-			fmt.Print("No json files found:" + josnfilepath + "\n")
+			fmt.Print("No json files found:" + josnfilepath)
 			fmt.Print("-jsfile json filename" + "\n")
 		} else {
-			fmt.Print("未发现json文件:" + josnfilepath + "\n")
+			fmt.Print("未发现json文件:" + josnfilepath)
 			fmt.Print("-jsfile json 文件名 " + "\n")
 		}
 		os.Exit(0)
@@ -276,32 +301,31 @@ func JsonGenSub () {
 	for jspos := range jSub.Subtitles {
 
 		for spos := range jSub.Subtitles[jspos].SplitInfo {
-			if  sstype == "b" {
+			if sstype == "b" {
 				jssubtext = strconv.Itoa(jSub.Subtitles[jspos].SplitInfo[spos].SPos+1) + "\n" +
 					jSub.Subtitles[jspos].SplitInfo[spos].STime + "\n" +
 					jSub.Subtitles[jspos].SplitInfo[spos].SCSub + "\n" +
 					jSub.Subtitles[jspos].SplitInfo[spos].SSub + "\n"
-			} else
-			{
+			} else {
 				jssubtext = strconv.Itoa(jSub.Subtitles[jspos].SplitInfo[spos].SPos+1) + "\n" +
 					jSub.Subtitles[jspos].SplitInfo[spos].STime + "\n" +
-					jSub.Subtitles[jspos].SplitInfo[spos].SCSub  + "\n"
+					jSub.Subtitles[jspos].SplitInfo[spos].SCSub + "\n"
 			}
 			_, werr := modifyfile.WriteString(jssubtext)
 			checkError(werr)
 		}
 	}
 	if slang == "en" {
-		fmt.Println("Generate subtitle file from json file. " + "\n")
+		fmt.Println("Generate subtitle file from json file. ")
 		fmt.Println("Please check the file: " + jschsfilename + " ." + "\n")
 	} else {
-		fmt.Println("由json文件生成字幕文件." + "\n")
+		fmt.Println("由json文件生成字幕文件.")
 		fmt.Println("请查看文件: " + jschsfilename + " ." + "\n")
 	}
 	os.Chmod(jschsfilename, 0644)
 }
 
-func oSubGentrText (inpath string) []subInfo {
+func oSubGentrText(inpath string) []subInfo {
 	var insub []subInfo
 	var CurSub subInfo
 	var curpart subpart
@@ -314,7 +338,7 @@ func oSubGentrText (inpath string) []subInfo {
 	NewCn := 1
 	mNum := 0
 	lend := false
-
+	bnpline := false
 
 	file, err := os.Open(inpath)
 	checkError(err)
@@ -361,6 +385,19 @@ func oSubGentrText (inpath string) []subInfo {
 
 					CurSub.DPos = NewCn
 					CurSub.MNum = mNum
+
+					if mNum >= nplinenum && len(pgfilepath) == 0 {
+						if !bnpline {
+							if slang == "en" {
+								fmt.Println("The lack of punctuation will greatly affect the subtitle translation effect.")
+							} else {
+								fmt.Println("缺少标点符号将极大影响字幕翻译效果，建议人工添加标点符号！")
+							}
+							bnpline = true
+						}
+						fmt.Println("BeginPos：" + strconv.Itoa(CurSub.SplitInfo[0].SPos) + " - EndPos：" +
+							strconv.Itoa(CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SPos) + "  Rows:" + strconv.Itoa(mNum))
+					}
 					CurSub.DESub = NewSub
 					insub = append(insub, CurSub)
 					NewCn++
@@ -388,7 +425,7 @@ func oSubGentrText (inpath string) []subInfo {
 		reg := regexp.MustCompile(`([;\.\?!])\"*$`)
 		if reg.MatchString(subText) {
 			//fmt.Println("--" + subText)
-			NewSub +=  subText + " "
+			NewSub += subText + " "
 			if (preTime == curpart.STime) && (BomLine >= 2) {
 				CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub += " " + subText
 				CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub = strings.Replace(CurSub.SplitInfo[len(CurSub.SplitInfo)-1].SSub, "-", "", -1)
@@ -445,10 +482,10 @@ func oSubGentrText (inpath string) []subInfo {
 	mNum = 0
 
 	os.Chmod(inpath+".en.txt", 0644)
-	return  insub
+	return insub
 }
 
-func DetectFCharset(dfile string,  ccF charCodes) charCodes {
+func DetectFCharset(dfile string, ccF charCodes) charCodes {
 	trCode, chsErr := os.Open(dfile)
 	checkError(chsErr)
 	defer trCode.Close()
@@ -472,8 +509,7 @@ func DetectFCharset(dfile string,  ccF charCodes) charCodes {
 	return ccF
 }
 
-
-func chstolastSub (chsallsub []subInfo) []subInfo {
+func chstolastSub(chsallsub []subInfo) []subInfo {
 	trchsfilename := ""
 	chsfile, chsErr := os.Open(trfilepath)
 	checkError(chsErr)
@@ -585,24 +621,23 @@ func chstolastSub (chsallsub []subInfo) []subInfo {
 					//有逗号结尾分隔符切分
 					if (len(sChs) >= len(sEn)) && bsplit && preSplit {
 						for j := range sEn {
-							juNum :=  len(lastSub) / chsallsub[lCount].MNum
+							juNum := len(lastSub) / chsallsub[lCount].MNum
 							if j == len(sEn)-1 {
 								//处理译文多出一个逗号的特殊情况
 
-
 								if (len(sChs) > len(sEn)) &&
-									(!(len(sChs) == chsallsub[lCount].MNum - 1)) &&
-									(len(subchs) < (juNum - juNum/3) )  {
+									(!(len(sChs) == chsallsub[lCount].MNum-1)) &&
+									(len(subchs) < (juNum - juNum/3)) {
 									nextNum := len(subchs + sChs[j])
-									if nextNum < (juNum+ juNum/3) &&
-										( j < len(sChs) - 1) {
+									if nextNum < (juNum+juNum/3) &&
+										(j < len(sChs)-1) {
 										subchs += sChs[j]
 										subchs += "，"
 									}
 								}
 								break
 							} else {
-								if len(subchs + sChs[j]) > (juNum+ juNum/3) &&
+								if len(subchs+sChs[j]) > (juNum+juNum/3) &&
 									len(subchs) > 0 {
 									break
 								}
@@ -711,7 +746,7 @@ func chstolastSub (chsallsub []subInfo) []subInfo {
 				chsallsub[lCount].SplitInfo[i].SCSub = subchs
 				lastEnSub = lastEnSub[len(chsallsub[lCount].SplitInfo[i].SSub):len(lastEnSub)]
 				lastSub = lastSub[len(subchs):len(lastSub)]
-				if  sstype == "b" {
+				if sstype == "b" {
 					subtext = strconv.Itoa(chsallsub[lCount].SplitInfo[i].SPos+1) + "\n" +
 						chsallsub[lCount].SplitInfo[i].STime + "\n" +
 						chsallsub[lCount].SplitInfo[i].SCSub + "\n" +
@@ -730,13 +765,13 @@ func chstolastSub (chsallsub []subInfo) []subInfo {
 		} else {
 			if chsallsub[lCount].MNum == 1 {
 				chsallsub[lCount].SplitInfo[0].SCSub = chsallsub[lCount].DCSub
-				if  sstype == "b" {
-					subtext = strconv.Itoa(chsallsub[lCount].SplitInfo[0].SPos + 1) + "\n" +
+				if sstype == "b" {
+					subtext = strconv.Itoa(chsallsub[lCount].SplitInfo[0].SPos+1) + "\n" +
 						chsallsub[lCount].SplitInfo[0].STime + "\n" +
 						chsallsub[lCount].DCSub + "\n" +
 						chsallsub[lCount].SplitInfo[0].SSub + "\n"
 				} else {
-					subtext = strconv.Itoa(chsallsub[lCount].SplitInfo[0].SPos + 1) + "\n" +
+					subtext = strconv.Itoa(chsallsub[lCount].SplitInfo[0].SPos+1) + "\n" +
 						chsallsub[lCount].SplitInfo[0].STime + "\n" +
 						chsallsub[lCount].DCSub + "\n"
 				}
@@ -750,21 +785,112 @@ func chstolastSub (chsallsub []subInfo) []subInfo {
 		lCount++
 	}
 	if slang == "en" {
-		fmt.Println("A subtitle file has been generated ." + "\n")
+		fmt.Println("A subtitle file has been generated .")
 		fmt.Println("Please check the file: " + trchsfilename + " ." + "\n")
 	} else {
-		fmt.Println("生成所需的字幕文件." + "\n")
+		fmt.Println("生成所需的字幕文件.")
 		fmt.Println("请查看文件: " + trchsfilename + " ." + "\n")
 	}
 	os.Chmod(trchsfilename, 0644)
 	return chsallsub
 }
 
+func oSubAddPunctuator(oSubinfo []subInfo) {
+	var segmenter sego.Segmenter
+	segmenter.LoadDictionary("dictionary.txt")
+	del_file(pgfilepath + ".en.srt")
+
+	pgfile, enErr := os.OpenFile(pgfilepath+".en.srt", os.O_CREATE|os.O_WRONLY, os.ModeAppend)
+	checkError(enErr)
+	defer pgfile.Close()
+	subtext := ""
+
+	if slang == "en" {
+		fmt.Println("Punctuation is being accessed at http://bark.phon.ioc.ee/punctuator." + "\n")
+	} else {
+		fmt.Println("正在访问http://bark.phon.ioc.ee/punctuator获取标点符号。" + "\n")
+	}
+
+	for ia := range oSubinfo {
+
+		resp, _ := http.PostForm("http://bark.phon.ioc.ee/punctuator",
+			url.Values{"text": {oSubinfo[ia].DESub}})
+		defer resp.Body.Close()
+
+		body, _ := ioutil.ReadAll(resp.Body)
+
+		segments1 := segmenter.Segment(body)
+		pgText := sego.SegmentsToSlice(segments1, false)
+
+		lcn := 0
+
+		for ib := range oSubinfo[ia].SplitInfo {
+			ensubtext := []byte(oSubinfo[ia].SplitInfo[ib].SSub)
+			segments1 := segmenter.Segment(ensubtext)
+			lsubText := sego.SegmentsToSlice(segments1, false)
+			lastText := ""
+			for ic := range lsubText {
+
+				if lsubText[ic] == " " {
+					continue
+				}
+				if lsubText[ic] == "'" {
+					//lastText = lastText[0 : len(lastText)-1]
+					lastText = strings.TrimRight(lastText, " ")
+					lastText += lsubText[ic]
+				} else {
+					lastText += lsubText[ic] + " "
+				}
+				for id := lcn; id < len(pgText)-1; id++ {
+					lcn = id
+
+					if pgText[id] == " " ||
+						pgText[id] == lsubText[ic] {
+						continue
+					}
+
+					if containEndSym(pgText[id]) {
+						lastText = strings.TrimRight(lastText, " ")
+						lastText += pgText[id] + " "
+					} else {
+						break
+					}
+				}
+			}
+			lastText = strings.TrimRight(lastText, " ")
+			lastText = strings.TrimRight(lastText, " ")
+
+			subtext = strconv.Itoa(oSubinfo[ia].SplitInfo[ib].SPos) + "\n" +
+				oSubinfo[ia].SplitInfo[ib].STime + "\n" +
+				lastText + "\n"
+			_, werr := pgfile.WriteString(subtext)
+			checkError(werr)
+		}
+	}
+	os.Chmod(pgfilepath+".en.srt", 0644)
+	if slang == "en" {
+		fmt.Println("Generate a subtitle file with punctuation added .")
+		fmt.Println("Please check the file: " + pgfilepath + ".en.srt" + " ." + "\n")
+	} else {
+		fmt.Println("生成带添加标点符号的字幕文件.")
+		fmt.Println("请查看文件: " + pgfilepath + ".en.srt" + " ." + "\n")
+	}
+}
+
 func main() {
 	flag.Parse()
 
-	if h || (infilepath == "" && josnfilepath == "") {
+	if h || (infilepath == "" && josnfilepath == "" && len(pgfilepath) == 0) {
 		flag.Usage()
+		os.Exit(0)
+	}
+	var allsub []subInfo
+
+	//为原字幕文件添加标点符号
+	if len(pgfilepath) > 0 {
+		allsub = oSubGentrText(pgfilepath)
+		del_file(pgfilepath + ".en.txt")
+		oSubAddPunctuator(allsub)
 		os.Exit(0)
 	}
 
@@ -774,8 +900,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	var allsub []subInfo
-    //转换输入字幕文件为待翻译文件
+	//转换原文字幕为待翻译文件
 	_, lerr := os.Stat(infilepath)
 	if os.IsNotExist(lerr) {
 		if slang == "en" {
@@ -792,29 +917,36 @@ func main() {
 
 	if len(trfilepath) == 0 {
 		if slang == "en" {
-			fmt.Println("Please translate the file [" + infilepath + ".en.txt]  " + "\n")
-			fmt.Println("Translate URLs: https://translate.google.com/" + "\n")
-			fmt.Println("             or https://cn.bing.com/Translator" + "\n")
-			fmt.Println("             or https://fanyi.baidu.com" + "\n")
-			fmt.Println("Chrome can drag and drop files directly onto the above website pages,  " + "\n")
-			fmt.Println("  and Google Translate can generate translations directly." + "\n")
-			fmt.Println("Note: Make sure the translated content matches the line location " + "\n")
+			fmt.Println("Please translate the file [" + infilepath + ".en.txt]  ")
+			fmt.Println("Translate URLs: https://translate.google.com/")
+			fmt.Println("             or https://cn.bing.com/Translator")
+			fmt.Println("             or https://fanyi.baidu.com")
+			fmt.Println("Chrome can drag and drop files directly onto the above website pages,  ")
+			fmt.Println("  and Google Translate can generate translations directly.")
+			fmt.Println("Note: Make sure the translated content matches the line location ")
 			fmt.Println("      and total number of rows of the original content." + "\n")
 		} else {
-			fmt.Println("请翻译此文件 [" + infilepath + ".en.txt]  " + "\n")
-			fmt.Println("可选用以下网址进行翻译： " + "\n")
-			fmt.Println(" URLs: https://translate.google.com" + "\n")
-			fmt.Println("    or https://cn.bing.com/Translator" + "\n")
-			fmt.Println("    or https://fanyi.baidu.com" + "\n")
-			fmt.Println("Chrome可将文件直接拖拽到以上网站页面，谷歌翻译即可生成翻译内容。" + "\n")
+			fmt.Println("请翻译此文件 [" + infilepath + ".en.txt]  ")
+			fmt.Println("可选用以下网址进行翻译： ")
+			fmt.Println(" URLs: https://translate.google.com")
+			fmt.Println("    or https://cn.bing.com/Translator")
+			fmt.Println("    or https://fanyi.baidu.com")
+			fmt.Println("Chrome可将文件直接拖拽到以上网站页面，谷歌翻译即可生成翻译内容。")
 			fmt.Println("注意事项：确保翻译内容与原内容的行位置和总行数要匹配。" + "\n")
 		}
+
+		//生成辅助json文件
+		del_file(infilepath + ".json")
+		jfilein, _ := json.MarshalIndent(allsub, "", "\t")
+		_ = ioutil.WriteFile(infilepath+".json", jfilein, 0644)
+
 		os.Exit(0)
 	}
 
 	//处理并合并翻译文件
 	_, eErr := os.Stat(trfilepath)
 	if !os.IsNotExist(eErr) {
+
 		allsub = chstolastSub(allsub)
 	} else {
 		if slang == "en" {
@@ -829,7 +961,7 @@ func main() {
 
 	//生成辅助json文件
 	del_file(infilepath + ".json")
-	jfile, _ := json.MarshalIndent(allsub, "", "\t")
-	_ = ioutil.WriteFile(infilepath+".json", jfile, 0644)
+	jlastfile, _ := json.MarshalIndent(allsub, "", "\t")
+	_ = ioutil.WriteFile(infilepath+".json", jlastfile, 0644)
 
 }
